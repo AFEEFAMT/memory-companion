@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Companion</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Memory Companion</h1>
+            <p class="subtitle">Your caring voice assistant</p>
+        </header>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="voice-interface">
+                    <button id="talkButton" class="talk-btn">
+                        <svg class="mic-icon" viewBox="0 0 24 24">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                        </svg>
+                        <span class="btn-text">Hold to Speak</span>
+                    </button>
+                    <div id="status" class="status">Ready to listen</div>
+                </div>
+
+                <div class="conversation-panel">
+                    <h3>Conversation</h3>
+                    <div id="conversationArea" class="conversation-area"></div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="tasks-section">
+                    <h3>Today's Tasks</h3>
+                    <div id="tasksList" class="tasks-list"></div>
+                </div>
+
+                <div class="notes-section">
+                    <h3>Memory Notes</h3>
+                    <div id="notesList" class="notes-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="caregiverAlert" class="caregiver-alert hidden">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+                <strong>Caregiver Alert</strong>
+                <p id="alertMessage"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
