@@ -3,6 +3,9 @@ Flask-CORS==4.0.0
 python-dotenv==1.0.0
 requests==2.31.0
 deepgram-sdk==3.0.0
+<<<<<<< HEAD
 google-generativeai==0.8.3
 chromadb==0.5.0
 sentence-transformers==2.5.1
+=======
+>>>>>>> 5a8867ea84c8aeabb188a7f99107c15e21a432ea

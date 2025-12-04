@@ -1,6 +1,10 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+<<<<<<< HEAD
+=======
+import asyncio
+>>>>>>> 5a8867ea84c8aeabb188a7f99107c15e21a432ea
 from dotenv import load_dotenv
 
 import database as db
@@ -9,10 +13,13 @@ from murf_service import generate_speech
 from deepgram_service import transcribe_audio
 
 load_dotenv()
+<<<<<<< HEAD
 required_keys = ['FLASK_SECRET_KEY', 'DEEPGRAM_API_KEY', 'MURF_API_KEY', 'GOOGLE_API_KEY']
 missing = [k for k in required_keys if not os.getenv(k)]
 if missing:
     raise EnvironmentError(f"Missing API keys: {missing}")
+=======
+>>>>>>> 5a8867ea84c8aeabb188a7f99107c15e21a432ea
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY')
@@ -33,8 +40,15 @@ def chat():
         if not patient_id:
             return jsonify({'error': 'Patient not found'}), 404
         
+<<<<<<< HEAD
         # DIRECT SYNC CALL
         user_text = transcribe_audio(audio_data)
+=======
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        user_text = loop.run_until_complete(transcribe_audio(audio_data))
+        loop.close()
+>>>>>>> 5a8867ea84c8aeabb188a7f99107c15e21a432ea
         
         companion = DementiaCompanion(patient_id)
         response_text = companion.process_input(user_text)
