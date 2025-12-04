@@ -57,7 +57,7 @@ def mark_task_completed(patient_id, task_name):
     today = date.today().isoformat()
     conn.execute(
         "UPDATE tasks SET completed = 1, completed_at = ? WHERE patient_id = ? AND task_name = ? AND date = ?",
-        (datetime.now(), patient_id, task_name, today)
+        (datetime.now().isoformat(), patient_id, task_name, today)
     )
     conn.commit()
     conn.close()

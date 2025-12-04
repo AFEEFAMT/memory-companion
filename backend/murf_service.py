@@ -1,6 +1,5 @@
 import requests
 import os
-import base64
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,7 +16,7 @@ def generate_speech(text):
     
     payload = {
         "text": text,
-        "voiceId": "en-US-ken",
+        "voiceId": "en-US-Alicia",
         "style": "Conversational",
         "rate": 0,
         "pitch": 0,
@@ -25,7 +24,7 @@ def generate_speech(text):
         "format": "MP3",
         "channelType": "STEREO",
         "pronunciationDictionary": {},
-        "encodeAsBase64": False,
+        "encodeAsBase64": True,
         "variation": 1,
         "audioDuration": 0,
         "modelVersion": "gen2"
@@ -40,14 +39,9 @@ def generate_speech(text):
         if 'encodedAudio' in result and result['encodedAudio']:
             return result['encodedAudio']
         
-        if 'audioFile' in result and result['audioFile']:
-            audio_url = result['audioFile']
-            audio_response = requests.get(audio_url)
-            audio_bytes = audio_response.content
-            return base64.b64encode(audio_bytes).decode('utf-8')
-        
         raise Exception("No audio data in Murf response")
     
     except Exception as e:
         print(f"Murf API error: {str(e)}")
-        raise Exception(f"Text-to-speech generation failed: {str(e)}")
+        # Return empty string or handle gracefully in frontend
+        raise Exception(f"Text-to-speech generation failed: {str(e)}")  
