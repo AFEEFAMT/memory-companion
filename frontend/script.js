@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadConversationHistory();
     checkCaregiverAlerts();
     updateClock();
+    initIsoLogo();
     
     setInterval(checkCaregiverAlerts, 60000);
     setInterval(updateClock, 1000);
@@ -409,4 +410,73 @@ async function sendTextMessage() {
         statusDiv.textContent = 'Error sending message';
         displayMessage("I'm having trouble connecting right now.", 'agent');
     }
+}
+
+function initIsoLogo() {
+    const svgContainer = document.getElementById('iso-logo');
+    if (!svgContainer) return;
+
+    // 1. Configuration Palette
+    const PALETTE = {
+        grey: { top: "#E5E7EB", right: "#9CA3AF", left: "#4B5563" },
+        neon: { top: "#D9F99D", right: "#84CC16", left: "#4D7C0F" }
+    };
+
+    const greyColors = [PALETTE.grey.top, PALETTE.grey.right, PALETTE.grey.left];
+    const neonColors = [PALETTE.neon.top, PALETTE.neon.right, PALETTE.neon.left];
+
+    // 2. Define the Shape (The Letter 'K')
+    const cubes = [
+        // Vertical Spine (Left Column)
+        { x: 30, y: 20, c: greyColors },
+        { x: 30, y: 35, c: greyColors },
+        { x: 30, y: 50, c: greyColors },
+        { x: 30, y: 65, c: greyColors },
+        { x: 30, y: 80, c: greyColors },
+        
+        // Top Right Arm
+        { x: 52, y: 35, c: greyColors },
+        { x: 74, y: 20, c: greyColors },
+        
+        // Bottom Right Leg (Neon Accent)
+        { x: 52, y: 65, c: neonColors },
+        { x: 74, y: 80, c: neonColors }
+    ];
+
+    // 3. Helper Function to Create a Single Cube
+    function createIsoCube(x, y, colors, size = 12) {
+        const halfW = size;
+        const halfH = size / 2;
+        
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("transform", `translate(${x}, ${y})`);
+
+        // Top Face
+        const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path1.setAttribute("d", `M0 ${-halfH} L${halfW} 0 L0 ${halfH} L${-halfW} 0 Z`);
+        path1.setAttribute("fill", colors[0]);
+
+        // Right Face
+        const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path2.setAttribute("d", `M${halfW} 0 L${halfW} ${size * 1.2} L0 ${size * 1.7} L0 ${halfH} Z`);
+        path2.setAttribute("fill", colors[1]);
+
+        // Left Face
+        const path3 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path3.setAttribute("d", `M0 ${halfH} L0 ${size * 1.7} L${-halfW} ${size * 1.2} L${-halfW} 0 Z`);
+        path3.setAttribute("fill", colors[2]);
+
+        g.appendChild(path1);
+        g.appendChild(path2);
+        g.appendChild(path3);
+        return g;
+    }
+
+    // 4. Render
+    svgContainer.innerHTML = '';
+    
+    cubes.forEach(cube => {
+        const el = createIsoCube(cube.x, cube.y, cube.c);
+        svgContainer.appendChild(el);
+    });
 }
