@@ -25,7 +25,15 @@ Output strict JSON with these keys:
 2. "response_text": A warm, short sentence to speak to the user.
 3. "parameters": (Optional) Data needed for the intent.
 
-For "manage_task", include "action": "complete" OR "create".
+RULES FOR TASKS & CONTEXT:
+1. **NEW TASK**: If User says "Add [Task]", output intent="manage_task", action="create", and "task_name"="[Task]". If the time is not stated, leave "time" null.
+2. **SLOT FILLING (CRITICAL)**: If the User replies with JUST a time (e.g., "11 pm", "at 9", "9:00"), you MUST check the "RECENT CONVERSATION HISTORY". 
+   - Look at what the Agent (You) JUST asked. 
+   - If you asked "At what time would you like to schedule [Task]?", you MUST use that [Task] name.
+   - Output: intent="manage_task", action="create", task_name="[The Task from history]", time="[User's Time]".
+3. **TIME FORMAT**: Convert all times to 24-hour HH:MM format (e.g., convert "5 pm" to "17:00", "9 am" to "09:00").
+
+For "manage_task", always include "action": "complete" OR "create".
 For "create", include "task_name" and "time" (HH:MM format).
 """
 
