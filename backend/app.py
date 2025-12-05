@@ -23,44 +23,55 @@ db.init_database()
 @app.route('/api/chat', methods=['POST'])
 def chat():
     try:
-        audio_file = request.files.get('audio')
-        if not audio_file:
-            return jsonify({'error': 'No audio file provided'}), 400
+        user_text = None
         
-        audio_data = audio_file.read()
+        # 1. Check for Text Input (JSON)
+        if request.is_json:
+            data = request.get_json()
+            user_text = data.get('message')
+            if not user_text:
+                return jsonify({'error': 'No message provided'}), 400
+
+        # 2. Check for Audio Input ]
+        elif 'audio' in request.files:
+            audio_file = request.files['audio']
+            audio_data = audio_file.read()
+            # Transcribe
+            user_text = transcribe_audio(audio_data) # 
+            
+            if user_text is None:
+                # Handle transcription failure
+                response_text = "I didn't catch that clearly. Could you say it again?"
+                audio_base64 = generate_speech(response_text)
+                return jsonify({
+                    'transcript': "",
+                    'response': response_text,
+                    'audio': audio_base64
+                })
         
+        else:
+            return jsonify({'error': 'Invalid content type. Send JSON or Audio file.'}), 400
+
+        # 3. Process the Input 
         patient_id = db.get_patient_id()
         if not patient_id:
             return jsonify({'error': 'Patient not found'}), 404
-        
-        # DIRECT SYNC CALL
-        user_text = transcribe_audio(audio_data)
 
-        if user_text is None:
-            # Immediate response without calling the LLM
-            response_text = "I didn't catch that clearly. Could you say it again?"
-            
-            # Generate audio for this specific error message
-            audio_base64 = generate_speech(response_text)
-            
-            return jsonify({
-                'transcript': "",
-                'response': response_text,
-                'audio': audio_base64
-            })
-        
-        patient_id = db.get_patient_id()
         companion = DementiaCompanion(patient_id)
+        
+        # Pass the text to the engine 
         response_text = companion.process_input(user_text)
         
+        # Save to DB 
         db.save_conversation(patient_id, user_text, response_text)
         
+        # Generate Audio response 
         audio_base64 = generate_speech(response_text)
         
         return jsonify({
             'transcript': user_text,
-            'response': response_text,
-            'audio': audio_base64
+            'response': response_text, 
+            'audio': audio_base64      
         })
     
     except Exception as e:

@@ -11,6 +11,8 @@ const tasksList = document.getElementById('tasksList');
 const notesList = document.getElementById('notesList');
 const caregiverAlert = document.getElementById('caregiverAlert');
 const alertMessage = document.getElementById('alertMessage');
+const textInput = document.getElementById('textInput');
+const sendButton = document.getElementById('sendButton');
 
 document.addEventListener('DOMContentLoaded', () => {
     loadTasks();
@@ -19,6 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
     checkCaregiverAlerts();
     
     setInterval(checkCaregiverAlerts, 60000);
+});
+
+sendButton.addEventListener('click', sendTextMessage);
+
+textInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendTextMessage();
+    }
 });
 
 talkButton.addEventListener('mousedown', startRecording);
@@ -282,5 +292,47 @@ async function loadConversationHistory() {
         
     } catch (error) {
         console.error('Error loading history:', error);
+    }
+}
+
+async function sendTextMessage() {
+    const text = textInput.value.trim();
+    if (!text) return;
+
+    textInput.value = '';
+    displayMessage(text, 'user');
+    statusDiv.textContent = 'Thinking...';
+
+    try {
+        // 2. Send JSON request
+        const response = await fetch(`${API_BASE_URL}/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message: text })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // 3. Display Agent Response
+        displayMessage(data.response, 'agent');
+
+        // 4. Play Audio if available
+        if (data.audio) {
+            await playAudioResponse(data.audio);
+        }
+        // 5. Refresh Data
+        loadTasks();
+        loadNotes();
+
+    } catch (error) {
+        console.error('Error:', error);
+        statusDiv.textContent = 'Error sending message';
+        displayMessage("I'm having trouble connecting right now.", 'agent');
     }
 }

@@ -61,51 +61,50 @@ class DementiaCompanion:
     # ------------------------------------------------------------------
 
     def _handle_task_logic(self, params, response_text, pending_tasks):
-        """
-        Handles both COMPLETING and CREATING tasks.
-        """
         action = params.get("action") 
         target_task = params.get("task_name")
         time_param = params.get("time")
 
         # 1. COMPLETION LOGIC
         if action == "complete" and target_task:
-            # Check if task exists
+            # Case-insensitive check
             task_exists = any(t['task_name'].lower() == target_task.lower() for t in pending_tasks)
             
             if task_exists:
-                # Find exact name match from DB
                 db_task_name = next((t['task_name'] for t in pending_tasks if t['task_name'].lower() == target_task.lower()), target_task)
                 db.mark_task_completed(self.patient_id, db_task_name)
                 return response_text
             else:
-                return "You've already finished that task today! You are doing great."
+                return "You've already finished that task today!"
 
         # 2. CREATION LOGIC
-        elif action == "create" and target_task:
-            
-            # If the LLM didn't catch a time, ask the user to clarify..
-            if not time_param:
+        elif action == "create":
+            # If we have a task name but NO time, ask for it
+            if target_task and not time_param:
                 return f"At what time would you like to schedule {target_task.replace('_', ' ')}?"
-
-            # --- VALIDATION & SAVING ---
-            # If we DO have a time, try to clean it up and save it
-            try:
-                # Simple check for HH:MM format
-                if ":" not in time_param:
-                    # If user said "5 pm", LLM might send "5 pm". We force a safe default if parsing fails.
-                    # Ideally, the LLM prompt handles this, but this is a safety net.
-                    time_param = "09:00" 
-            except:
-                time_param = "09:00"
-
-            success = db.create_task(self.patient_id, target_task, time_param)
             
-            if success:
-                return f"I've added {target_task.replace('_', ' ')} to your list for {time_param}."
-            else:
-                return f"You already have {target_task.replace('_', ' ')} on your list for today."
-        
+            # If we have BOTH (because the LLM found the name in history), save it.
+            if target_task and time_param:
+                try:
+                    # Clean time string
+                    clean_time = time_param.lower().replace("pm","").replace("am","").strip()
+                    if ":" not in clean_time:
+                        hour = int(clean_time)
+                        
+                        if "pm" in str(params.get("raw_time", "")).lower() and hour < 12:
+                             hour += 12
+                        time_param = f"{hour:02d}:00"
+                except:
+                    time_param = "12:00" 
+
+                # SAVE TO DB
+                success = db.create_task(self.patient_id, target_task, time_param)
+                
+                if success:
+                    return f"Okay, I've added {target_task.replace('_', ' ')} for {time_param}."
+                else:
+                    return f"You already have {target_task} on your list."
+
         return response_text
 
     def _handle_memory_save(self, user_speech, response_text, params):
