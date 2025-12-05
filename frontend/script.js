@@ -15,6 +15,7 @@ const alertMessage = document.getElementById('alertMessage');
 document.addEventListener('DOMContentLoaded', () => {
     loadTasks();
     loadNotes();
+    loadConversationHistory();
     checkCaregiverAlerts();
     
     setInterval(checkCaregiverAlerts, 60000);
@@ -265,5 +266,21 @@ async function checkCaregiverAlerts() {
         
     } catch (error) {
         console.error('Error checking alerts:', error);
+    }
+}
+async function loadConversationHistory() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/history`);
+        const history = await response.json();
+        
+        conversationArea.innerHTML = ''; 
+        
+        history.forEach(chat => {
+            displayMessage(chat.user_message, 'user');
+            displayMessage(chat.agent_response, 'agent');
+        });
+        
+    } catch (error) {
+        console.error('Error loading history:', error);
     }
 }

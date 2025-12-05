@@ -100,6 +100,15 @@ def caregiver_alert():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    try:
+        patient_id = db.get_patient_id()
+        history = db.get_recent_conversations(patient_id, limit=10) 
+        return jsonify(history)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/record-call', methods=['POST'])
 def record_call():
     try:
