@@ -27,17 +27,19 @@ Output strict JSON with these keys:
 
 RULES FOR INTENTS:
 
-1. **MANAGE_TASK**: 
-   - Trigger: "Add [Task]", "Remind me to [Task] at [Time]".
+1. **MANAGE_TASK** (For Schedule/Calendar items):
+   - Trigger: "Add [Task]", "Remind me to [Task] at [Time]", "I have a meeting at [Time]".
    - Action: "create" or "complete".
    - Include "task_name" and "time" (24-hour HH:MM).
-   - **CONTEXT RULE**: If User gives JUST a time ("at 9"), check HISTORY. If Agent asked "At what time... [Task]?", use that [Task].
+   - **CRITICAL CONTEXT RULE**: If User replies with JUST a time (e.g., "11 pm", "at 9"), check the "RECENT CONVERSATION HISTORY". 
+     - Look at what the Agent (You) JUST asked. 
+     - If you asked "At what time would you like to schedule [Task]?", you MUST use THAT [Task] name. Do not invent a new one.
 
-2. **SAVE_MEMORY**:
+2. **SAVE_MEMORY** (For Facts/Sticky Notes):
    - Trigger: "Note that...", "Remember that...", "Write down...", "My daughter visited today".
+   - **PRIORITY RULE**: If the user provides a specific time for an action (e.g., "Meeting at 2pm", "Lunch at 12"), classify this as 'manage_task' so it goes on the calendar, even if they say "remember" or "memory".
    - Action: "save".
    - Parameter "note_content": Extract the core fact (e.g., "User's daughter visited today").
-   - Parameter "due_datetime": Only if a specific future reminder is requested (YYYY-MM-DD HH:MM), otherwise null.
 
 3. **RECALL_MEMORY**:
    - Trigger: "What did I do today?", "Who visited me?", "Do I have any notes?".
@@ -99,9 +101,6 @@ def get_ai_response(user_text, pending_tasks_list, recent_history):
         }
 
 def synthesize_memory_answer(user_query, context_str):
-    """
-    Uses the LLM to answer a question based ONLY on the provided memory context.
-    """
     try:
         model = genai.GenerativeModel("gemini-2.0-flash")
         

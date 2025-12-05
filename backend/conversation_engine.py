@@ -111,16 +111,17 @@ class DementiaCompanion:
         """
         Saves memory to BOTH SQL (for logs) and Vector DB (for search).
         """
-        # 1. Extract clean content if LLM provided it, else use raw speech
-        note_content = params.get("note_content") or user_speech
+        # 1. Use the clean 'note_content' extracted by LLM. 
+        # If the LLM failed to extract parameters, fallback to the full user speech.
+        note_content = params.get("note_content")
+        if not note_content:
+            note_content = user_speech
         
-        # 2. Save to SQLite
+        # 2. Save to SQLite (Structured Log)
         reminder_time = params.get("due_datetime")
-        
-        # Use the cleaned content here
         db.add_memory_note(self.patient_id, note_content, reminder_time)
         
-        # 3. Save to Vector Store
+        # 3. Save to Vector Store (Semantic Search)
         metadata = {
             "patient_id": self.patient_id,
             "date": datetime.now().isoformat(),
