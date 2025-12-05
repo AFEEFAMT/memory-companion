@@ -7,29 +7,49 @@ let isRecording = false;
 const talkButton = document.getElementById('talkButton');
 const statusDiv = document.getElementById('status');
 const conversationArea = document.getElementById('conversationArea');
+const messagesList = document.getElementById('messagesList');
 const tasksList = document.getElementById('tasksList');
 const notesList = document.getElementById('notesList');
 const caregiverAlert = document.getElementById('caregiverAlert');
 const alertMessage = document.getElementById('alertMessage');
-const textInput = document.getElementById('textInput');
-const sendButton = document.getElementById('sendButton');
+const messageInput = document.getElementById('messageInput');
+const typingIndicator = document.getElementById('typingIndicator');
+const themeToggle = document.getElementById('themeToggle');
+const currentTime = document.getElementById('currentTime');
 
 document.addEventListener('DOMContentLoaded', () => {
     loadTasks();
     loadNotes();
     loadConversationHistory();
     checkCaregiverAlerts();
+    updateClock();
     
     setInterval(checkCaregiverAlerts, 60000);
+    setInterval(updateClock, 1000);
 });
 
-sendButton.addEventListener('click', sendTextMessage);
+if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        const newTheme = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+    });
+}
 
-textInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        sendTextMessage();
-    }
-});
+if (messageInput) {
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+    });
+    
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendTextMessage();
+        }
+    });
+}
 
 talkButton.addEventListener('mousedown', startRecording);
 talkButton.addEventListener('mouseup', stopRecording);
@@ -41,6 +61,16 @@ talkButton.addEventListener('touchend', (e) => {
     e.preventDefault();
     stopRecording();
 });
+
+function updateClock() {
+    if (!currentTime) return;
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    currentTime.textContent = `${displayHours}:${minutes} ${ampm}`;
+}
 
 async function startRecording() {
     try {
@@ -58,7 +88,7 @@ async function startRecording() {
         isRecording = true;
         
         statusDiv.textContent = 'Listening...';
-        talkButton.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+        talkButton.classList.add('recording');
         
     } catch (error) {
         console.error('Microphone error:', error);
@@ -73,7 +103,7 @@ async function stopRecording() {
     isRecording = false;
     
     statusDiv.textContent = 'Processing...';
-    talkButton.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    talkButton.classList.remove('recording');
     
     mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
@@ -86,6 +116,8 @@ async function stopRecording() {
 async function sendAudioToServer(audioBlob) {
     const formData = new FormData();
     formData.append('audio', audioBlob);
+    
+    if (typingIndicator) typingIndicator.classList.remove('hidden');
     
     try {
         const response = await fetch(`${API_BASE_URL}/chat`, {
@@ -101,6 +133,8 @@ async function sendAudioToServer(audioBlob) {
         
         console.log('Response received:', data);
         
+        if (typingIndicator) typingIndicator.classList.add('hidden');
+        
         displayMessage(data.transcript, 'user');
         displayMessage(data.response, 'agent');
         
@@ -108,7 +142,7 @@ async function sendAudioToServer(audioBlob) {
             await playAudioResponse(data.audio);
         } else {
             console.error('No audio in response');
-            statusDiv.textContent = 'Ready to listen';
+            statusDiv.textContent = 'Hold microphone to speak';
         }
         
         loadTasks();
@@ -116,20 +150,39 @@ async function sendAudioToServer(audioBlob) {
         
     } catch (error) {
         console.error('Error:', error);
+        if (typingIndicator) typingIndicator.classList.add('hidden');
         statusDiv.textContent = 'Error - Ready to try again';
         setTimeout(() => {
-            statusDiv.textContent = 'Ready to listen';
+            statusDiv.textContent = 'Hold microphone to speak';
         }, 2000);
     }
 }
 
 function displayMessage(text, type) {
+    const target = messagesList || conversationArea;
+    if (!target) return;
+    
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}-message`;
-    messageDiv.textContent = text;
     
-    conversationArea.appendChild(messageDiv);
-    conversationArea.scrollTop = conversationArea.scrollHeight;
+    const avatar = type === 'user' ? 'U' : 'K';
+    messageDiv.innerHTML = `
+        <div class="message-avatar">${avatar}</div>
+        <div class="message-content">
+            <div class="message-bubble">${text}</div>
+        </div>
+    `;
+    
+    target.appendChild(messageDiv);
+    
+    requestAnimationFrame(() => {
+        if (conversationArea) {
+            conversationArea.scrollTo({
+                top: conversationArea.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    });
 }
 
 async function playAudioResponse(audioBase64) {
@@ -143,26 +196,26 @@ async function playAudioResponse(audioBase64) {
             
             audio.play().catch(err => {
                 console.error('Audio play error:', err);
-                statusDiv.textContent = 'Audio play failed - Ready to listen';
+                statusDiv.textContent = 'Hold microphone to speak';
                 reject(err);
             });
             
             audio.onended = () => {
-                statusDiv.textContent = 'Ready to listen';
+                statusDiv.textContent = 'Hold microphone to speak';
                 URL.revokeObjectURL(audioUrl);
                 resolve();
             };
             
             audio.onerror = (err) => {
                 console.error('Audio error:', err);
-                statusDiv.textContent = 'Ready to listen';
+                statusDiv.textContent = 'Hold microphone to speak';
                 URL.revokeObjectURL(audioUrl);
                 reject(err);
             };
             
         } catch (error) {
             console.error('Error creating audio:', error);
-            statusDiv.textContent = 'Ready to listen';
+            statusDiv.textContent = 'Hold microphone to speak';
             reject(error);
         }
     });
@@ -185,22 +238,28 @@ async function loadTasks() {
         const response = await fetch(`${API_BASE_URL}/tasks`);
         const tasks = await response.json();
         
+        if (!tasksList) return;
+        
+        if (tasks.length === 0) {
+            tasksList.innerHTML = '<p class="empty-state">No tasks yet</p>';
+            return;
+        }
+        
         tasksList.innerHTML = '';
         
         tasks.forEach(task => {
             const taskDiv = document.createElement('div');
-            // Add 'completed' class if task.completed is true
             taskDiv.className = `task-item ${task.completed ? 'completed' : ''}`;
-        
             taskDiv.onclick = () => toggleTask(task.id, !task.completed);
             
-            // Format the name 
             const taskName = task.task_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             
             taskDiv.innerHTML = `
-                <span class="task-name">${taskName}</span>
-                <span class="task-time">${task.scheduled_time}</span>
-                <span class="task-status">${task.completed ? '✅' : '⏰'}</span>
+                <div class="task-content">
+                    <span class="task-name">${taskName}</span>
+                    <span class="task-time">${task.scheduled_time}</span>
+                </div>
+                <span class="task-status">${task.completed ? '✓' : ''}</span>
             `;
             
             tasksList.appendChild(taskDiv);
@@ -219,7 +278,6 @@ async function toggleTask(id, newStatus) {
             body: JSON.stringify({ completed: newStatus })
         });
         
-        // Reload list to show the update
         loadTasks(); 
     } catch (error) {
         console.error('Error updating task:', error);
@@ -231,14 +289,16 @@ async function loadNotes() {
         const response = await fetch(`${API_BASE_URL}/notes`);
         const notes = await response.json();
         
-        notesList.innerHTML = '';
+        if (!notesList) return;
         
         if (notes.length === 0) {
-            notesList.innerHTML = '<p style="color: #999; text-align: center;">No notes yet</p>';
+            notesList.innerHTML = '<p class="empty-state">No memories yet</p>';
             return;
         }
         
-        notes.forEach(note => {
+        notesList.innerHTML = '';
+        
+        notes.slice(0, 10).forEach(note => {
             const noteDiv = document.createElement('div');
             noteDiv.className = 'note-item';
             
@@ -250,8 +310,8 @@ async function loadNotes() {
             });
             
             noteDiv.innerHTML = `
-                <div>${note.note_text}</div>
-                <div class="note-time">${createdAt}</div>
+                <div class="note-text">${note.note_text}</div>
+                <span class="note-time">${createdAt}</span>
             `;
             
             notesList.appendChild(noteDiv);
@@ -267,6 +327,8 @@ async function checkCaregiverAlerts() {
         const response = await fetch(`${API_BASE_URL}/caregiver-alert`);
         const data = await response.json();
         
+        if (!caregiverAlert || !alertMessage) return;
+        
         if (data.alert) {
             alertMessage.textContent = data.alert;
             caregiverAlert.classList.remove('hidden');
@@ -278,12 +340,16 @@ async function checkCaregiverAlerts() {
         console.error('Error checking alerts:', error);
     }
 }
+
 async function loadConversationHistory() {
     try {
         const response = await fetch(`${API_BASE_URL}/history`);
         const history = await response.json();
         
-        conversationArea.innerHTML = ''; 
+        if (history.length === 0) return;
+        
+        const target = messagesList || conversationArea;
+        if (target) target.innerHTML = '';
         
         history.forEach(chat => {
             displayMessage(chat.user_message, 'user');
@@ -296,15 +362,20 @@ async function loadConversationHistory() {
 }
 
 async function sendTextMessage() {
-    const text = textInput.value.trim();
+    if (!messageInput) return;
+    
+    const text = messageInput.value.trim();
     if (!text) return;
 
-    textInput.value = '';
+    messageInput.value = '';
+    messageInput.style.height = 'auto';
+    
     displayMessage(text, 'user');
     statusDiv.textContent = 'Thinking...';
+    
+    if (typingIndicator) typingIndicator.classList.remove('hidden');
 
     try {
-        // 2. Send JSON request
         const response = await fetch(`${API_BASE_URL}/chat`, {
             method: 'POST',
             headers: {
@@ -318,20 +389,23 @@ async function sendTextMessage() {
         }
 
         const data = await response.json();
+        
+        if (typingIndicator) typingIndicator.classList.add('hidden');
 
-        // 3. Display Agent Response
         displayMessage(data.response, 'agent');
 
-        // 4. Play Audio if available
         if (data.audio) {
             await playAudioResponse(data.audio);
+        } else {
+            statusDiv.textContent = 'Hold microphone to speak';
         }
-        // 5. Refresh Data
+        
         loadTasks();
         loadNotes();
 
     } catch (error) {
         console.error('Error:', error);
+        if (typingIndicator) typingIndicator.classList.add('hidden');
         statusDiv.textContent = 'Error sending message';
         displayMessage("I'm having trouble connecting right now.", 'agent');
     }

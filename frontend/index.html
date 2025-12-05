@@ -1,67 +1,121 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Memory Companion</title>
+    <title>KAYA - Memory Assistant</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Memory Companion</h1>
-            <p class="subtitle">Your caring voice assistant</p>
-        </header>
+    <header class="top-header">
+        <div class="logo-section">
+            <img src="assets/kaya-logo.png" alt="KAYA" class="logo-img">
+            <div class="logo-text">
+                <h1>KAYA</h1>
+                <p>MEMORY ASSISTANT</p>
+            </div>
+        </div>
+        <div class="header-controls">
+            <div class="time-display">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    ircle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span id="currentTime">9:28 PM</span>
+            </div>
+            <button id="themeToggle" class="theme-btn" aria-label="Toggle theme">
+                <svg class="sun-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    ircle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                <svg class="moon-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
+        </div>
+    </header>
 
-        <div class="main-content">
-            <div class="left-panel">
-                <div class="voice-interface">
-                    <button id="talkButton" class="talk-btn">
-                        <svg class="mic-icon" viewBox="0 0 24 24">
-                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                        </svg>
-                        <span class="btn-text">Hold to Speak</span>
-                    </button>
-                    <div id="status" class="status">Ready to listen</div>
+    <div class="main-layout">
+        <aside class="sidebar left-sidebar">
+            <div class="sidebar-card">
+                <div class="card-header">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    <h3>Memory Notes</h3>
                 </div>
+                <div id="notesList" class="card-content scrollable">
+                    <p class="empty-state">No memories yet</p>
+                </div>
+            </div>
+        </aside>
 
-                <div class="conversation-panel">
-                    <h3>Conversation</h3>
-                    <div id="conversationArea" class="conversation-area"></div>
-                    <div class="input-area">
-                        <input type="text" id="textInput" class="chat-input" placeholder="Type a message..." autocomplete="off">
-                        <button id="sendButton" class="send-btn">
-                            <svg viewBox="0 0 24 24" class="send-icon">
-                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                            </svg>
-                        </button>
+        <main class="chat-container">
+            <div id="caregiverAlert" class="alert-box hidden">
+                <div class="alert-icon">⚠️</div>
+                <div class="alert-content">
+                    <strong>Caregiver Alert</strong>
+                    <p id="alertMessage"></p>
+                </div>
+            </div>
+
+            <div id="conversationArea" class="conversation-area scrollable">
+                <div id="messagesList" class="messages-list"></div>
+                <div id="typingIndicator" class="typing-indicator hidden">
+                    <div class="typing-avatar">K</div>
+                    <div class="typing-dots">
+                        <span></span><span></span><span></span>
                     </div>
                 </div>
             </div>
 
-            <div class="right-panel">
-                <div class="tasks-section">
+            <div class="input-section-fixed">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="messageInput" 
+                        class="text-input" 
+                        placeholder="Ask KAYA to remember something..."
+                        rows="1"
+                        aria-label="Message input"
+                    ></textarea>
+                    <button id="talkButton" class="mic-btn" aria-label="Record voice message">
+                        <svg class="mic-icon" viewBox="0 0 24 24" width="24" height="24">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" fill="currentColor"/>
+                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="status" class="status-text">Hold microphone to speak</div>
+            </div>
+        </main>
+
+        <aside class="sidebar right-sidebar">
+            <div class="sidebar-card">
+                <div class="card-header">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
                     <h3>Today's Tasks</h3>
-                    <div id="tasksList" class="tasks-list"></div>
                 </div>
-
-                <div class="notes-section">
-                    <h3>Memory Notes</h3>
-                    <div id="notesList" class="notes-list"></div>
+                <div id="tasksList" class="card-content scrollable">
+                    <p class="empty-state">No tasks yet</p>
                 </div>
             </div>
-        </div>
-
-        <div id="caregiverAlert" class="caregiver-alert hidden">
-            <div class="alert-icon">⚠️</div>
-            <div class="alert-content">
-                <strong>Caregiver Alert</strong>
-                <p id="alertMessage"></p>
-            </div>
-        </div>
+        </aside>
     </div>
 
     <script src="script.js"></script>
 </body>
 </html>
+
