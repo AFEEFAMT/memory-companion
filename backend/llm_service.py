@@ -29,32 +29,46 @@ Example JSON:
 {{"intent": "chat", "response_text": "I am doing well, how are you?", "parameters": {{}}}}
 """
 
-def get_ai_response(user_text, pending_tasks_list):
+def get_ai_response(user_text, pending_tasks_list, recent_history):
     try:
         current_time = datetime.now().strftime("%A, %I:%M %p")
         tasks_str = ", ".join([t['task_name'] for t in pending_tasks_list]) or "None"
         
-        # Inject context into the system prompt
+        # --- NEW: Format history into a readable script ---
+        history_str = ""
+        if recent_history:
+            # Reverse history so it flows chronologically (Oldest -> Newest)
+            for turn in reversed(recent_history):
+                history_str += f"User: {turn['user_message']}\nKaya: {turn['agent_response']}\n"
+        
+        # Inject history into the prompt
         formatted_system_prompt = SYSTEM_INSTRUCTION.format(
             current_time=current_time, 
             pending_tasks=tasks_str
         )
+        
+        # We append the history strictly to the context
+        full_prompt = f"""
+        {formatted_system_prompt}
 
-        # Initialize the model with the specific system instruction
+        RECENT CONVERSATION HISTORY:
+        {history_str}
+        
+        USER'S NEW INPUT:
+        {user_text}
+        """
+        
         model = genai.GenerativeModel(
             model_name="gemini-2.0-flash",
-            system_instruction=formatted_system_prompt,
             generation_config={"response_mime_type": "application/json"}
         )
 
-        # Send the user's message
-        response = model.generate_content(user_text)
+        response = model.generate_content(full_prompt)
         clean_text = re.sub(r"```(json)?", "", response.text, flags=re.IGNORECASE).strip()
         return json.loads(clean_text)
 
     except Exception as e:
         logging.error(f"Gemini API Error: {e}")
-        # Fallback safe response
         return {
             "intent": "chat", 
             "response_text": "I'm having a little trouble connecting, but I'm here with you."
