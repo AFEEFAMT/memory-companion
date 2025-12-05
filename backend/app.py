@@ -101,6 +101,22 @@ def record_call():
         return jsonify({'message': 'Call recorded successfully'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/tasks/<int:task_id>', methods=['PUT'])
+def update_task(task_id):
+    try:
+        data = request.json
+        # Check if 'completed' is provided in the JSON body
+        if 'completed' not in data:
+            return jsonify({'error': 'Missing completed status'}), 400
+
+        # Call the new database function
+        db.update_task_status(task_id, data['completed'])
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)

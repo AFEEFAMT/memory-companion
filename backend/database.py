@@ -41,6 +41,26 @@ def get_patient_id():
     patient = conn.execute("SELECT id FROM patients LIMIT 1").fetchone()
     conn.close()
     return patient['id'] if patient else None
+def create_task(patient_id, task_name, scheduled_time):
+    conn = get_db_connection()
+    today = date.today().isoformat()
+    
+    existing = conn.execute(
+        "SELECT id FROM tasks WHERE patient_id = ? AND task_name = ? AND date = ?",
+        (patient_id, task_name, today)
+    ).fetchone()
+    
+    if not existing:
+        conn.execute(
+            "INSERT INTO tasks (patient_id, task_name, scheduled_time, date, completed) VALUES (?, ?, ?, ?, 0)",
+            (patient_id, task_name, scheduled_time, today)
+        )
+        conn.commit()
+        conn.close()
+        return True
+    
+    conn.close()
+    return False
 
 def get_all_tasks(patient_id):
     conn = get_db_connection()
@@ -115,3 +135,16 @@ def get_recent_caller(patient_id):
     ).fetchone()
     conn.close()
     return dict(call) if call else None
+
+def update_task_status(task_id, is_completed):
+    conn = get_db_connection()
+    
+    completed_int = 1 if is_completed else 0
+    completed_at = datetime.now().isoformat() if is_completed else None
+    
+    conn.execute(
+        "UPDATE tasks SET completed = ?, completed_at = ? WHERE id = ?",
+        (completed_int, completed_at, task_id)
+    )
+    conn.commit()
+    conn.close()

@@ -23,10 +23,10 @@ Pending Tasks: {pending_tasks}
 Output strict JSON with these keys:
 1. "intent": One of ["manage_task", "save_memory", "recall_memory", "chat", "danger"]
 2. "response_text": A warm, short sentence to speak to the user.
-3. "parameters": (Optional) Data needed for the intent (e.g., task_name, due_datetime).
+3. "parameters": (Optional) Data needed for the intent.
 
-Example JSON:
-{{"intent": "chat", "response_text": "I am doing well, how are you?", "parameters": {{}}}}
+For "manage_task", include "action": "complete" OR "create".
+For "create", include "task_name" and "time" (HH:MM format).
 """
 
 def get_ai_response(user_text, pending_tasks_list, recent_history):
@@ -34,7 +34,6 @@ def get_ai_response(user_text, pending_tasks_list, recent_history):
         current_time = datetime.now().strftime("%A, %I:%M %p")
         tasks_str = ", ".join([t['task_name'] for t in pending_tasks_list]) or "None"
         
-        # --- NEW: Format history into a readable script ---
         history_str = ""
         if recent_history:
             # Reverse history so it flows chronologically (Oldest -> Newest)
@@ -57,7 +56,7 @@ def get_ai_response(user_text, pending_tasks_list, recent_history):
         USER'S NEW INPUT:
         {user_text}
         """
-        
+
         model = genai.GenerativeModel(
             model_name="gemini-2.0-flash",
             generation_config={"response_mime_type": "application/json"}

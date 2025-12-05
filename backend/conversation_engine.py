@@ -62,21 +62,49 @@ class DementiaCompanion:
 
     def _handle_task_logic(self, params, response_text, pending_tasks):
         """
-        Updates database if LLM detects a task completion.
+        Handles both COMPLETING and CREATING tasks.
         """
         action = params.get("action") 
         target_task = params.get("task_name")
+        time_param = params.get("time")
 
+        # 1. COMPLETION LOGIC
         if action == "complete" and target_task:
-            # Verify task is actually pending to avoid double-marking
-            task_exists = any(t['task_name'] == target_task for t in pending_tasks)
+            # Check if task exists
+            task_exists = any(t['task_name'].lower() == target_task.lower() for t in pending_tasks)
             
             if task_exists:
-                db.mark_task_completed(self.patient_id, target_task)
-                # The LLM has already generated a "Good job!" response in 'response_text'
+                # Find exact name match from DB
+                db_task_name = next((t['task_name'] for t in pending_tasks if t['task_name'].lower() == target_task.lower()), target_task)
+                db.mark_task_completed(self.patient_id, db_task_name)
                 return response_text
             else:
                 return "You've already finished that task today! You are doing great."
+
+        # 2. CREATION LOGIC
+        elif action == "create" and target_task:
+            
+            # If the LLM didn't catch a time, ask the user to clarify..
+            if not time_param:
+                return f"At what time would you like to schedule {target_task.replace('_', ' ')}?"
+
+            # --- VALIDATION & SAVING ---
+            # If we DO have a time, try to clean it up and save it
+            try:
+                # Simple check for HH:MM format
+                if ":" not in time_param:
+                    # If user said "5 pm", LLM might send "5 pm". We force a safe default if parsing fails.
+                    # Ideally, the LLM prompt handles this, but this is a safety net.
+                    time_param = "09:00" 
+            except:
+                time_param = "09:00"
+
+            success = db.create_task(self.patient_id, target_task, time_param)
+            
+            if success:
+                return f"I've added {target_task.replace('_', ' ')} to your list for {time_param}."
+            else:
+                return f"You already have {target_task.replace('_', ' ')} on your list for today."
         
         return response_text
 
@@ -85,7 +113,7 @@ class DementiaCompanion:
         Saves memory to BOTH SQL (for logs) and Vector DB (for search).
         """
         # 1. Save to SQLite (Structured Log)
-        reminder_time = params.get("due_datetime") # Extracted by LLM
+        reminder_time = params.get("due_datetime")
         db.add_memory_note(self.patient_id, user_speech, reminder_time)
         
         # 2. Save to Vector Store (Semantic Search)

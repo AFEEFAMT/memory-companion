@@ -178,8 +178,12 @@ async function loadTasks() {
         
         tasks.forEach(task => {
             const taskDiv = document.createElement('div');
+            // Add 'completed' class if task.completed is true
             taskDiv.className = `task-item ${task.completed ? 'completed' : ''}`;
+        
+            taskDiv.onclick = () => toggleTask(task.id, !task.completed);
             
+            // Format the name 
             const taskName = task.task_name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             
             taskDiv.innerHTML = `
@@ -193,6 +197,21 @@ async function loadTasks() {
         
     } catch (error) {
         console.error('Error loading tasks:', error);
+    }
+}
+
+async function toggleTask(id, newStatus) {
+    try {
+        await fetch(`${API_BASE_URL}/tasks/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ completed: newStatus })
+        });
+        
+        // Reload list to show the update
+        loadTasks(); 
+    } catch (error) {
+        console.error('Error updating task:', error);
     }
 }
 
