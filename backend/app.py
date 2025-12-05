@@ -35,7 +35,21 @@ def chat():
         
         # DIRECT SYNC CALL
         user_text = transcribe_audio(audio_data)
+
+        if user_text is None:
+            # Immediate response without calling the LLM
+            response_text = "I didn't catch that clearly. Could you say it again?"
+            
+            # Generate audio for this specific error message
+            audio_base64 = generate_speech(response_text)
+            
+            return jsonify({
+                'transcript': "",
+                'response': response_text,
+                'audio': audio_base64
+            })
         
+        patient_id = db.get_patient_id()
         companion = DementiaCompanion(patient_id)
         response_text = companion.process_input(user_text)
         

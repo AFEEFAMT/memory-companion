@@ -20,7 +20,7 @@ def transcribe_audio(audio_data):
         
         if response.status_code != 200:
             print(f"Deepgram Error Details: {response.text}")
-            return "I didn't catch that clearly"
+            return None
         
         result = response.json()
         
@@ -29,10 +29,10 @@ def transcribe_audio(audio_data):
             transcript = result['results']['channels'][0]['alternatives'][0]['transcript']
             
             if not transcript or transcript.strip() == "":
-                return "I didn't hear anything"
+                return None
             return transcript  
-        return "I didn't hear anything"
+        return None
     
     except Exception as e:
         print(f"Deepgram error: {str(e)}")
-        return "I had trouble understanding that"
+        return None
