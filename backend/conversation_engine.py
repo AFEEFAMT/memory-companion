@@ -28,14 +28,13 @@ class DementiaCompanion:
             recent_history = db.get_recent_conversations(self.patient_id, limit=3)
             
             # 2. Router: Ask LLM what the user wants
-            # We now pass 'recent_history' to the function
             ai_decision = llm_service.get_ai_response(user_speech, pending_tasks, recent_history)
             
             intent = ai_decision.get("intent")
             initial_response = ai_decision.get("response_text")
             params = ai_decision.get("parameters", {})
             
-            logger.info(f"User: {user_speech} | Intent: {intent}")
+            logger.info(f"User: {user_speech} | Intent: {intent} | Action: {params.get('action')}")
 
             # 3. Execute Logic based on Intent
             if intent == "manage_task":
@@ -46,6 +45,9 @@ class DementiaCompanion:
                 
             elif intent == "recall_memory":
                 return self._handle_memory_recall(user_speech)
+
+            elif intent == "delete_memory":
+                return self._handle_memory_delete(initial_response)
             
             elif intent == "danger":
                 return "I understand you are upset. I am going to contact your caregiver to help you right now."
@@ -67,7 +69,6 @@ class DementiaCompanion:
 
         # 1. COMPLETION LOGIC
         if action == "complete" and target_task:
-            # Case-insensitive check
             task_exists = any(t['task_name'].lower() == target_task.lower() for t in pending_tasks)
             
             if task_exists:
@@ -79,49 +80,50 @@ class DementiaCompanion:
 
         # 2. CREATION LOGIC
         elif action == "create":
-            # If we have a task name but NO time, ask for it
             if target_task and not time_param:
                 return f"At what time would you like to schedule {target_task.replace('_', ' ')}?"
             
-            # If we have BOTH (because the LLM found the name in history), save it.
             if target_task and time_param:
                 try:
-                    # Clean time string
                     clean_time = time_param.lower().replace("pm","").replace("am","").strip()
                     if ":" not in clean_time:
                         hour = int(clean_time)
-
                         if "pm" in str(params.get("raw_time", "")).lower() and hour < 12:
                              hour += 12
                         time_param = f"{hour:02d}:00"
                 except:
                     time_param = "12:00" 
 
-                # SAVE TO DB
                 success = db.create_task(self.patient_id, target_task, time_param)
-                
                 if success:
                     return f"Okay, I've added {target_task.replace('_', ' ')} for {time_param}."
                 else:
                     return f"You already have {target_task} on your list."
 
+        # 3. DELETION LOGIC (SINGLE TASK)
+        elif action == "delete" and target_task:
+            db_task_name = next((t['task_name'] for t in pending_tasks if t['task_name'].lower() == target_task.lower()), target_task)
+            success = db.delete_task(self.patient_id, db_task_name)
+            if success:
+                return f"I have removed {target_task.replace('_', ' ')} from your schedule."
+            else:
+                return f"I couldn't find a task named {target_task}."
+
+        # 4. DELETE ALL TASKS
+        elif action == "delete_all":
+            db.delete_all_tasks(self.patient_id)
+            return "I have cleared all your scheduled tasks for today."
+
         return response_text
 
     def _handle_memory_save(self, user_speech, response_text, params):
-        """
-        Saves memory to BOTH SQL (for logs) and Vector DB (for search).
-        """
-        # 1. Use the clean 'note_content' extracted by LLM. 
-        # If the LLM failed to extract parameters, fallback to the full user speech.
-        note_content = params.get("note_content")
-        if not note_content:
-            note_content = user_speech
+        note_content = params.get("note_content") or user_speech
         
-        # 2. Save to SQLite (Structured Log)
+        # SQL Log
         reminder_time = params.get("due_datetime")
         db.add_memory_note(self.patient_id, note_content, reminder_time)
         
-        # 3. Save to Vector Store (Semantic Search)
+        # Vector Store
         metadata = {
             "patient_id": self.patient_id,
             "date": datetime.now().isoformat(),
@@ -132,42 +134,37 @@ class DementiaCompanion:
         return response_text
 
     def _handle_memory_recall(self, user_query):
-        # 1. Search Vector DB
         found_notes = memory_vector_service.search_similar_memories(user_query)
         
         if not found_notes:
             return "I don't have a note about that, but I can write it down if you tell me."
 
-        # 2. Contextualize for LLM
         context_str = "\n".join([f"- {n['text']} (Date: {n['metadata']['date'][:10]})" for n in found_notes])
-        
-        # 3. Generate Answer
         final_answer = llm_service.synthesize_memory_answer(user_query, context_str)
         return final_answer
+
+    def _handle_memory_delete(self, response_text):
+        """Deletes ALL memory notes."""
+        db.delete_all_memory_notes(self.patient_id)
+        memory_vector_service.delete_patient_memories(self.patient_id)
+        return response_text
 
     # ------------------------------------------------------------------
     # UTILITIES
     # ------------------------------------------------------------------
 
     def check_missed_tasks(self):
-        """
-        Used by the caregiver-alert endpoint to check for overdue items.
-        """
         tasks = db.get_all_tasks(self.patient_id)
         current_time = datetime.now()
         missed = []
         
         for task in tasks:
             if not task['completed']:
-                # Parse scheduled time
                 try:
                     task_time = datetime.strptime(task['scheduled_time'], '%H:%M').time()
                     scheduled_datetime = datetime.combine(datetime.today(), task_time)
-                    
-                    # If 1 hour past schedule
                     if current_time > scheduled_datetime + timedelta(hours=1):
                         missed.append(task['task_name'].replace('_', ' '))
                 except ValueError:
-                    continue # Skip invalid time formats
-        
+                    continue
         return missed

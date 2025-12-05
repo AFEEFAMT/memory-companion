@@ -37,3 +37,17 @@ def search_similar_memories(query_text, n_results=2):
         
     return [{"text": doc, "metadata": meta} 
         for doc, meta in zip(results['documents'][0], results['metadatas'][0])]
+
+def delete_patient_memories(patient_id):
+    """
+    Deletes all vector embeddings for a specific patient.
+    """
+    try:
+        # Delete entries where metadata matches patient_id
+        collection.delete(
+            where={"patient_id": patient_id}
+        )
+        return True
+    except Exception as e:
+        print(f"Vector delete error: {e}")
+        return False
