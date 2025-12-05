@@ -25,16 +25,26 @@ Output strict JSON with these keys:
 2. "response_text": A warm, short sentence to speak to the user.
 3. "parameters": (Optional) Data needed for the intent.
 
-RULES FOR TASKS & CONTEXT:
-1. **NEW TASK**: If User says "Add [Task]", output intent="manage_task", action="create", and "task_name"="[Task]". If the time is not stated, leave "time" null.
-2. **SLOT FILLING (CRITICAL)**: If the User replies with JUST a time (e.g., "11 pm", "at 9", "9:00"), you MUST check the "RECENT CONVERSATION HISTORY". 
-   - Look at what the Agent (You) JUST asked. 
-   - If you asked "At what time would you like to schedule [Task]?", you MUST use that [Task] name.
-   - Output: intent="manage_task", action="create", task_name="[The Task from history]", time="[User's Time]".
-3. **TIME FORMAT**: Convert all times to 24-hour HH:MM format (e.g., convert "5 pm" to "17:00", "9 am" to "09:00").
+RULES FOR INTENTS:
 
-For "manage_task", always include "action": "complete" OR "create".
-For "create", include "task_name" and "time" (HH:MM format).
+1. **MANAGE_TASK**: 
+   - Trigger: "Add [Task]", "Remind me to [Task] at [Time]".
+   - Action: "create" or "complete".
+   - Include "task_name" and "time" (24-hour HH:MM).
+   - **CONTEXT RULE**: If User gives JUST a time ("at 9"), check HISTORY. If Agent asked "At what time... [Task]?", use that [Task].
+
+2. **SAVE_MEMORY**:
+   - Trigger: "Note that...", "Remember that...", "Write down...", "My daughter visited today".
+   - Action: "save".
+   - Parameter "note_content": Extract the core fact (e.g., "User's daughter visited today").
+   - Parameter "due_datetime": Only if a specific future reminder is requested (YYYY-MM-DD HH:MM), otherwise null.
+
+3. **RECALL_MEMORY**:
+   - Trigger: "What did I do today?", "Who visited me?", "Do I have any notes?".
+   - Action: "recall".
+
+4. **TIME FORMAT**: Convert all times to 24-hour HH:MM.
+
 """
 
 def get_ai_response(user_text, pending_tasks_list, recent_history):
@@ -71,14 +81,21 @@ def get_ai_response(user_text, pending_tasks_list, recent_history):
         )
 
         response = model.generate_content(full_prompt)
-        clean_text = re.sub(r"```(json)?", "", response.text, flags=re.IGNORECASE).strip()
-        return json.loads(clean_text)
+        
+        # Robust JSON cleaning/parsing
+        try:
+            return json.loads(response.text)
+        except json.JSONDecodeError:
+            clean_text = re.sub(r"```(json)?", "", response.text, flags=re.IGNORECASE).strip()
+            return json.loads(clean_text)
 
     except Exception as e:
+        print(f"!!! GEMINI API ERROR: {str(e)}")
         logging.error(f"Gemini API Error: {e}")
         return {
             "intent": "chat", 
-            "response_text": "I'm having a little trouble connecting, but I'm here with you."
+            "response_text": "I'm having a little trouble connecting, but I'm here with you.",
+            "parameters": {}
         }
 
 def synthesize_memory_answer(user_query, context_str):

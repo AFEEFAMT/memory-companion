@@ -90,7 +90,7 @@ class DementiaCompanion:
                     clean_time = time_param.lower().replace("pm","").replace("am","").strip()
                     if ":" not in clean_time:
                         hour = int(clean_time)
-                        
+
                         if "pm" in str(params.get("raw_time", "")).lower() and hour < 12:
                              hour += 12
                         time_param = f"{hour:02d}:00"
@@ -111,17 +111,22 @@ class DementiaCompanion:
         """
         Saves memory to BOTH SQL (for logs) and Vector DB (for search).
         """
-        # 1. Save to SQLite (Structured Log)
-        reminder_time = params.get("due_datetime")
-        db.add_memory_note(self.patient_id, user_speech, reminder_time)
+        # 1. Extract clean content if LLM provided it, else use raw speech
+        note_content = params.get("note_content") or user_speech
         
-        # 2. Save to Vector Store (Semantic Search)
+        # 2. Save to SQLite
+        reminder_time = params.get("due_datetime")
+        
+        # Use the cleaned content here
+        db.add_memory_note(self.patient_id, note_content, reminder_time)
+        
+        # 3. Save to Vector Store
         metadata = {
             "patient_id": self.patient_id,
             "date": datetime.now().isoformat(),
             "type": "general_note"
         }
-        memory_vector_service.save_vector_memory(user_speech, metadata)
+        memory_vector_service.save_vector_memory(note_content, metadata)
         
         return response_text
 
