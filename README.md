@@ -77,7 +77,7 @@ Access at: `http://localhost:8000`
 
 ## Demo Video
 
-
+https://github.com/AFEEFAMT/memory-companion/blob/main/KAYA-Memory%20Assistant%20Demo.mp4
 
 ## Usage
 
@@ -125,6 +125,7 @@ Access at: `http://localhost:8000`
 ---
 
 *Built with care for dementia patients and caregivers*
+
 
 
 
