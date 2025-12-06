@@ -1,7 +1,7 @@
 # KAYA - AI-Powered Memory Companion for Dementia Care
 
 **Techfest IIT Bombay x Murf Voice Agent Hackathon 2025-26**  
-**Team:** AFEEFA M T & AZIL SYED E K  
+**Team:** AZIL SYED E K & AFEEFA M T
 
 ![App Screenshot](application_interface.png)  
 
@@ -73,7 +73,11 @@ python -m http.server 8000
 
 ```
 
-Access at: `http://localhost:8000`
+Access at: `http://localhost:8000` 
+
+## Demo Video
+
+https://github.com/AFEEFAMT/memory-companion/blob/main/KAYA-Memory%20Assistant%20Demo.mp4
 
 ## Usage
 
@@ -116,11 +120,12 @@ Access at: `http://localhost:8000`
 
 ## Contact
 
-**GitHub:** [AFEEFA M T](https://github.com/AFEEFAMT), [AZIL SYED E K](https://github.com/achill06)
+**GitHub:** [AZIL SYED E K](https://github.com/achill06), [AFEEFA M T](https://github.com/AFEEFAMT)
 
 ---
 
 *Built with care for dementia patients and caregivers*
+
 
 
 
